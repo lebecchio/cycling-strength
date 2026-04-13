@@ -248,7 +248,7 @@ function initApp() {
   renderSessionForm();
   renderWeight();
   renderProgress();
-  renderEntryCount();
+  renderDataCount();
 }
 
 function wireLogout() {
@@ -259,10 +259,14 @@ function wireLogout() {
 }
 
 function wireTabs() {
-  document.querySelectorAll('.tab').forEach(btn => {
+  document.querySelectorAll('.tabs .tab').forEach(btn => {
     btn.addEventListener('click', () => {
       const tab = btn.dataset.tab;
-      document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tabs .tab').forEach(b => {
+        const active = b === btn;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
       document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
       if (tab === 'weight') renderWeightChart();
       if (tab === 'progress') renderProgressChart();
@@ -277,7 +281,9 @@ function wireToday() {
       currentSession = b.dataset.session;
       document.querySelector('[data-tab="log"]').click();
       document.querySelectorAll('.session-picker .pill').forEach(p => {
-        p.classList.toggle('active', p.dataset.session === currentSession);
+        const active = p.dataset.session === currentSession;
+        p.classList.toggle('active', active);
+        p.setAttribute('aria-selected', active ? 'true' : 'false');
       });
       renderSessionForm();
     });
@@ -293,14 +299,16 @@ function wireToday() {
     saveJSON(STORAGE.shift, scheduleShift);
     renderToday();
   });
-  document.getElementById('shift-reset').addEventListener('click', () => {
-    if (!confirm('Reset schedule shift and clear all day swaps?')) return;
-    scheduleShift = 0;
-    scheduleSwaps = {};
-    swapSelection = null;
-    saveJSON(STORAGE.shift, scheduleShift);
-    saveJSON(STORAGE.swaps, scheduleSwaps);
-    renderToday();
+  document.getElementById('shift-reset').addEventListener('click', (e) => {
+    if (scheduleShift === 0 && Object.keys(scheduleSwaps).length === 0) return;
+    armConfirm(e.currentTarget, 'Tap again', () => {
+      scheduleShift = 0;
+      scheduleSwaps = {};
+      swapSelection = null;
+      saveJSON(STORAGE.shift, scheduleShift);
+      saveJSON(STORAGE.swaps, scheduleSwaps);
+      renderToday();
+    });
   });
 }
 
@@ -405,7 +413,7 @@ function renderToday() {
   }
   shiftInfo.innerHTML = shiftHtml.join('');
 
-  // Week summary
+  // Week summary (buttons for keyboard access)
   const start = startOfWeek(today);
   const rows = [];
   const todayIso = isoDate(today);
@@ -413,20 +421,23 @@ function renderToday() {
     const d = new Date(start); d.setDate(start.getDate() + i);
     const ymd = isoDate(d);
     const p = planForDate(d);
-    const done = p.code.length === 1 && workouts.some(w => w.date === ymd && w.session === p.code);
+    const done = p.code && p.code.length === 1 && workouts.some(w => w.date === ymd && w.session === p.code);
     const dayLabel = d.toLocaleDateString(undefined, { weekday: 'short' });
+    const dateShort = `${d.getDate()}/${d.getMonth() + 1}`;
     const isToday = ymd === todayIso;
     const isSelected = swapSelection && swapSelection.weekStart === weekStart && swapSelection.calDay === d.getDay();
     rows.push(`
-      <div class="summary-row ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" data-calday="${d.getDay()}">
-        <span class="day">${dayLabel} · ${d.getDate()}/${d.getMonth() + 1}</span>
-        <span>${p.title}${done ? ' ✓' : ''}</span>
-      </div>
+      <button type="button" class="summary-row ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
+              data-calday="${d.getDay()}"
+              aria-label="${escapeHtml(dayLabel)} ${dateShort} — ${escapeHtml(p.title)}${done ? ' (done)' : ''}. Tap to swap.">
+        <span class="day">${dayLabel} · ${dateShort}</span>
+        <span class="title">${escapeHtml(p.title)}</span>
+        <span class="mark">${done ? '✓' : ''}</span>
+      </button>
     `);
   }
   document.getElementById('week-summary').innerHTML = rows.join('');
 
-  // Wire swap clicks
   document.querySelectorAll('#week-summary .summary-row').forEach(row => {
     row.addEventListener('click', () => {
       const calDay = parseInt(row.dataset.calday, 10);
@@ -475,7 +486,11 @@ function wireSessionForm() {
   document.querySelectorAll('.session-picker .pill').forEach(p => {
     p.addEventListener('click', () => {
       currentSession = p.dataset.session;
-      document.querySelectorAll('.session-picker .pill').forEach(b => b.classList.toggle('active', b === p));
+      document.querySelectorAll('.session-picker .pill').forEach(b => {
+        const active = b === p;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
       renderSessionForm();
     });
   });
@@ -485,10 +500,22 @@ function wireSessionForm() {
   dateInput.addEventListener('change', renderSessionForm);
 
   document.getElementById('save-session').addEventListener('click', saveSession);
-  document.getElementById('clear-session').addEventListener('click', () => {
-    if (!confirm('Clear all inputs in this session?')) return;
-    renderSessionForm(true);
+  document.getElementById('clear-session').addEventListener('click', (e) => {
+    armConfirm(e.currentTarget, 'Tap again to clear', () => renderSessionForm(true));
   });
+
+  document.getElementById('date-prev').addEventListener('click', () => stepDate(-1));
+  document.getElementById('date-next').addEventListener('click', () => stepDate(1));
+}
+
+function stepDate(delta) {
+  const input = document.getElementById('session-date');
+  if (!input.value) input.value = isoDate(new Date());
+  const [y, m, d] = input.value.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + delta);
+  input.value = isoDate(dt);
+  renderSessionForm();
 }
 
 function renderSessionForm(forceBlank = false) {
@@ -514,11 +541,14 @@ function renderSessionForm(forceBlank = false) {
       const rVal = set.reps ?? '';
       const wPh = ex.bodyweight ? 'bw' : '';
       const rPh = extractFirstNumber(ex.reps) ?? '';
+      const exLabel = escapeHtml(ex.name);
       rowsHtml.push(`
-        <div class="set-label">${s + 1}</div>
+        <div class="set-label" aria-hidden="true">${s + 1}</div>
         <input type="number" step="0.5" inputmode="decimal" placeholder="${wPh}" value="${wVal}"
+               aria-label="${exLabel}, set ${s + 1}, weight in kilograms"
                data-ex="${exIdx}" data-set="${s}" data-field="weight">
         <input type="number" step="1" inputmode="numeric" placeholder="${rPh}" value="${rVal}"
+               aria-label="${exLabel}, set ${s + 1}, reps"
                data-ex="${exIdx}" data-set="${s}" data-field="reps">
       `);
     }
@@ -588,7 +618,7 @@ function formatSets(sets) {
 
 function saveSession() {
   const date = document.getElementById('session-date').value;
-  if (!date) { alert('Pick a date.'); return; }
+  if (!date) { showToast('Pick a date', 'err'); return; }
   const sess = SESSIONS[currentSession];
 
   const exercises = sess.exercises.map((ex, exIdx) => {
@@ -605,7 +635,7 @@ function saveSession() {
   });
 
   const anyData = exercises.some(e => e.sets.some(s => s.weight != null || s.reps != null));
-  if (!anyData) { alert('Log at least one set before saving.'); return; }
+  if (!anyData) { showToast('Log at least one set', 'err'); return; }
 
   const idx = workouts.findIndex(w => w.date === date && w.session === currentSession);
   const entry = { date, session: currentSession, exercises, savedAt: new Date().toISOString() };
@@ -615,15 +645,37 @@ function saveSession() {
   showToast('Saved');
   renderToday();
   renderProgress();
-  renderEntryCount();
+  renderDataCount();
 }
 
-function showToast(msg) {
+function showToast(msg, variant = '') {
   const t = document.getElementById('save-toast');
   t.textContent = msg;
+  t.className = 'toast' + (variant ? ` ${variant}` : '');
   t.hidden = false;
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => { t.hidden = true; }, 1600);
+  showToast._t = setTimeout(() => { t.hidden = true; }, 1800);
+}
+
+// Two-tap confirm for destructive buttons. Saves us a native confirm().
+function armConfirm(btn, promptText, action, timeout = 3000) {
+  if (btn._armed) {
+    clearTimeout(btn._armTimer);
+    btn._armed = false;
+    btn.textContent = btn._originalText;
+    btn.classList.remove('confirming');
+    action();
+    return;
+  }
+  btn._armed = true;
+  btn._originalText = btn.textContent;
+  btn.textContent = promptText;
+  btn.classList.add('confirming');
+  btn._armTimer = setTimeout(() => {
+    btn._armed = false;
+    btn.textContent = btn._originalText;
+    btn.classList.remove('confirming');
+  }, timeout);
 }
 
 // Weight tab --------------------------------------------------------------
@@ -646,15 +698,36 @@ function wireWeight() {
 }
 
 function renderWeight() {
-  const current = weights.length ? weights[weights.length - 1].weight : null;
-  document.getElementById('wt-current').textContent = current != null ? `${current.toFixed(1)} kg` : '—';
+  renderWeightHeadline();
   renderWeightChart();
   renderWeightHistory();
 }
 
+function renderWeightHeadline() {
+  const el = document.getElementById('weight-headline');
+  if (!weights.length) {
+    el.innerHTML = `Start weight <span class="h-accent">${START_WEIGHT.toFixed(0)} kg</span>. Race-weight range <span class="h-dim">${TARGET_LOW}–${TARGET_HIGH} kg</span>. Log an entry to start tracking.`;
+    return;
+  }
+  const current = weights[weights.length - 1].weight;
+  const delta = current - START_WEIGHT;
+  const toTarget = current - TARGET_HIGH;
+  const direction = delta < 0 ? 'Down' : (delta > 0 ? 'Up' : 'At');
+  const deltaAbs = Math.abs(delta).toFixed(1);
+  const toTargetStr = toTarget > 0
+    ? `${toTarget.toFixed(1)} kg to the top of the race-weight range.`
+    : `In the race-weight range.`;
+  el.innerHTML = `
+    <span class="h-accent">${direction} ${deltaAbs} kg</span> since start.
+    <span class="h-dim">Now ${current.toFixed(1)} kg. ${toTargetStr}</span>
+  `;
+}
+
 function renderWeightChart() {
-  if (!window.Chart) { setTimeout(renderWeightChart, 80); return; }
-  const ctx = document.getElementById('weight-chart').getContext('2d');
+  if (!window.Chart) return; // Chart.js loads via defer before app.js; panel re-render covers late cases.
+  const canvas = document.getElementById('weight-chart');
+  const ctx = canvas.getContext('2d');
+  const theme = themeColors();
   const labels = weights.map(w => w.date);
   const data = weights.map(w => w.weight);
   if (weightChart) weightChart.destroy();
@@ -663,18 +736,29 @@ function renderWeightChart() {
     data: {
       labels,
       datasets: [
-        { label: 'Weight', data, borderColor: '#ff5c2b', backgroundColor: 'rgba(255,92,43,0.12)',
+        { label: 'Weight', data,
+          borderColor: theme.accent,
+          backgroundColor: theme.accentSoft,
           borderWidth: 2, tension: 0.3, pointRadius: 3, pointHoverRadius: 5, fill: true },
       ],
     },
-    options: chartOpts({
+    options: chartOpts(theme, {
       y: {
         suggestedMin: Math.min(TARGET_LOW - 1, ...(data.length ? data : [START_WEIGHT])),
         suggestedMax: Math.max(START_WEIGHT + 1, ...(data.length ? data : [START_WEIGHT])),
       },
-      annotations: [TARGET_LOW, TARGET_HIGH],
     }),
   });
+
+  // Dynamic accessible label summarising the trend.
+  if (!data.length) {
+    canvas.setAttribute('aria-label', 'Weight chart — no entries yet');
+  } else {
+    const first = data[0], last = data[data.length - 1];
+    const diff = (last - first).toFixed(1);
+    canvas.setAttribute('aria-label',
+      `Weight chart: ${data.length} entries, from ${first.toFixed(1)} to ${last.toFixed(1)} kg (${diff >= 0 ? '+' : ''}${diff}).`);
+  }
 }
 
 function renderWeightHistory() {
@@ -738,10 +822,12 @@ function exerciseHistory(name) {
 }
 
 function renderProgressChart() {
-  if (!window.Chart) { setTimeout(renderProgressChart, 80); return; }
+  if (!window.Chart) return;
   const name = document.getElementById('progress-exercise').value;
   const hist = exerciseHistory(name);
-  const ctx = document.getElementById('progress-chart').getContext('2d');
+  const canvas = document.getElementById('progress-chart');
+  const ctx = canvas.getContext('2d');
+  const theme = themeColors();
   if (progressChart) progressChart.destroy();
   progressChart = new Chart(ctx, {
     type: 'line',
@@ -750,13 +836,21 @@ function renderProgressChart() {
       datasets: [{
         label: 'Top weight (kg)',
         data: hist.map(h => h.topWeight),
-        borderColor: '#ff5c2b',
-        backgroundColor: 'rgba(255,92,43,0.12)',
+        borderColor: theme.accent,
+        backgroundColor: theme.accentSoft,
         borderWidth: 2, tension: 0.3, pointRadius: 3, fill: true,
       }],
     },
-    options: chartOpts({}),
+    options: chartOpts(theme, {}),
   });
+
+  if (!hist.length) {
+    canvas.setAttribute('aria-label', `Progress for ${name}: no entries`);
+  } else {
+    const first = hist[0].topWeight, last = hist[hist.length - 1].topWeight;
+    canvas.setAttribute('aria-label',
+      `Progress for ${name}: ${hist.length} entries, top weight from ${first} to ${last} kg.`);
+  }
 }
 
 function renderProgressHistory() {
@@ -799,13 +893,14 @@ function renderProgressHistory() {
 function wireData() {
   document.getElementById('export-json').addEventListener('click', exportJSON);
   document.getElementById('import-json').addEventListener('change', importJSON);
-  document.getElementById('reset-all').addEventListener('click', () => {
-    if (!confirm('Delete ALL workouts and weight entries? This cannot be undone.')) return;
-    if (!confirm('Really? This wipes everything.')) return;
-    workouts = []; weights = [];
-    saveJSON(STORAGE.workouts, workouts);
-    saveJSON(STORAGE.weights, weights);
-    renderToday(); renderSessionForm(); renderWeight(); renderProgress(); renderEntryCount();
+  document.getElementById('reset-all').addEventListener('click', (e) => {
+    armConfirm(e.currentTarget, 'Tap again to wipe everything', () => {
+      workouts = []; weights = [];
+      saveJSON(STORAGE.workouts, workouts);
+      saveJSON(STORAGE.weights, weights);
+      renderToday(); renderSessionForm(); renderWeight(); renderProgress(); renderDataCount();
+      showToast('All data cleared');
+    }, 4000);
   });
 }
 
@@ -820,7 +915,7 @@ function exportJSON() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `arenberg-backup-${isoDate(new Date())}.json`;
+  a.download = `strength-backup-${isoDate(new Date())}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -833,17 +928,17 @@ function importJSON(e) {
     try {
       const data = JSON.parse(reader.result);
       if (!data || !Array.isArray(data.workouts) || !Array.isArray(data.weights)) {
-        throw new Error('Invalid file format.');
+        throw new Error('Invalid file format');
       }
       if (!confirm(`Import ${data.workouts.length} workouts and ${data.weights.length} weight entries? This replaces current data.`)) return;
       workouts = data.workouts;
       weights = data.weights;
       saveJSON(STORAGE.workouts, workouts);
       saveJSON(STORAGE.weights, weights);
-      renderToday(); renderSessionForm(); renderWeight(); renderProgress(); renderEntryCount();
-      alert('Import complete.');
+      renderToday(); renderSessionForm(); renderWeight(); renderProgress(); renderDataCount();
+      showToast('Import complete');
     } catch (err) {
-      alert('Import failed: ' + err.message);
+      showToast('Import failed: ' + err.message, 'err');
     } finally {
       e.target.value = '';
     }
@@ -851,9 +946,13 @@ function importJSON(e) {
   reader.readAsText(file);
 }
 
-function renderEntryCount() {
-  document.getElementById('entry-count').textContent =
-    `${workouts.length} workout${workouts.length === 1 ? '' : 's'} · ${weights.length} weight entr${weights.length === 1 ? 'y' : 'ies'} logged.`;
+function renderDataCount() {
+  const el = document.getElementById('data-count');
+  if (!el) return;
+  const wCount = workouts.length;
+  const kCount = weights.length;
+  el.textContent =
+    `Backup will include ${wCount} workout${wCount === 1 ? '' : 's'} and ${kCount} weight entr${kCount === 1 ? 'y' : 'ies'}.`;
 }
 
 // Helpers -----------------------------------------------------------------
@@ -894,28 +993,41 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
-function chartOpts({ y = {}, annotations = [] } = {}) {
+function themeColors() {
+  const style = getComputedStyle(document.documentElement);
+  const get = (name) => style.getPropertyValue(name).trim();
+  return {
+    accent:     get('--accent')     || '#d4834b',
+    accentSoft: get('--accent-soft') || 'rgba(212,131,75,0.14)',
+    bgElev:     get('--bg-elev')    || '#1c1a17',
+    border:     get('--border')     || '#2e2b27',
+    text:       get('--text')       || '#ece6dc',
+    textDim:    get('--text-dim')   || '#b6ad9f',
+  };
+}
+
+function chartOpts(theme, { y = {} } = {}) {
   return {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1d222b',
-        borderColor: '#262c37',
+        backgroundColor: theme.bgElev,
+        borderColor: theme.border,
         borderWidth: 1,
-        titleColor: '#e7ecf3',
-        bodyColor: '#e7ecf3',
+        titleColor: theme.text,
+        bodyColor: theme.text,
       },
     },
     scales: {
       x: {
-        grid: { color: '#1d222b' },
-        ticks: { color: '#8a94a6', maxRotation: 0, autoSkipPadding: 12 },
+        grid: { color: theme.border },
+        ticks: { color: theme.textDim, maxRotation: 0, autoSkipPadding: 12 },
       },
       y: {
-        grid: { color: '#1d222b' },
-        ticks: { color: '#8a94a6' },
+        grid: { color: theme.border },
+        ticks: { color: theme.textDim },
         ...y,
       },
     },

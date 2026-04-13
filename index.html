@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0d0f12">
+  <meta name="theme-color" content="#141210">
   <title>Strength Program</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
   <script src="app.js" defer></script>
@@ -12,129 +17,140 @@
 <body>
   <!-- Login -->
   <section id="login" class="login">
-    <form id="login-form" class="login-card" autocomplete="off">
-      <div class="lock" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="10" width="16" height="11" rx="2"/>
-          <path d="M8 10V7a4 4 0 1 1 8 0v3"/>
-        </svg>
+    <div class="login-stage">
+      <div class="login-mark">
+        <span class="mark-kicker">Six months. Five days a week.</span>
+        <h1 class="mark-title">One program.</h1>
       </div>
-      <h1>Sign in</h1>
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password" autofocus>
-      <button type="submit">Enter</button>
-      <p id="login-error" class="error" hidden>Wrong password</p>
-    </form>
+      <form id="login-form" class="login-form" autocomplete="off">
+        <label for="password" class="visually-hidden">Password</label>
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" autofocus>
+        <button type="submit">Enter</button>
+        <p id="login-error" class="error" hidden role="alert">Wrong password</p>
+      </form>
+    </div>
   </section>
 
   <!-- App -->
   <main id="app" hidden>
+    <h1 class="visually-hidden">Cycling strength program</h1>
+
     <header class="topbar">
       <div class="brand">Strength Program</div>
-      <button id="logout" class="ghost" title="Log out" aria-label="Log out">Logout</button>
+      <button id="logout" class="ghost">Logout</button>
     </header>
 
-    <nav class="tabs" id="tabs" role="tablist">
-      <button class="tab active" data-tab="today" role="tab">Today</button>
-      <button class="tab" data-tab="log" role="tab">Log</button>
-      <button class="tab" data-tab="weight" role="tab">Weight</button>
-      <button class="tab" data-tab="progress" role="tab">Progress</button>
-      <button class="tab" data-tab="data" role="tab">Data</button>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab active" data-tab="today"    role="tab" id="tabtab-today"    aria-controls="tab-today"    aria-selected="true">Today</button>
+      <button class="tab"        data-tab="log"      role="tab" id="tabtab-log"      aria-controls="tab-log"      aria-selected="false">Log</button>
+      <button class="tab"        data-tab="weight"   role="tab" id="tabtab-weight"   aria-controls="tab-weight"   aria-selected="false">Weight</button>
+      <button class="tab"        data-tab="progress" role="tab" id="tabtab-progress" aria-controls="tab-progress" aria-selected="false">Progress</button>
+      <button class="tab"        data-tab="data"     role="tab" id="tabtab-data"     aria-controls="tab-data"     aria-selected="false">Data</button>
     </nav>
 
     <!-- Today -->
-    <section id="tab-today" class="panel active">
-      <div class="today-card">
+    <section id="tab-today" class="panel active" role="tabpanel" aria-labelledby="tabtab-today">
+      <div class="today-lead">
         <div class="date-label" id="today-date"></div>
         <div class="prescription" id="today-prescription"></div>
       </div>
-      <div class="quick-jump">
-        <button class="big" data-session="A">Strength A — Lower Body</button>
-        <button class="big" data-session="B">Strength B — Upper + Core</button>
-        <button class="big" data-session="C">Strength C — Power</button>
+
+      <div class="quick-jump" aria-label="Quick-jump to session">
+        <button class="big" data-session="A"><span class="big-kicker">A</span><span class="big-title">Lower Body Power</span></button>
+        <button class="big" data-session="B"><span class="big-kicker">B</span><span class="big-title">Upper Body + Core</span></button>
+        <button class="big" data-session="C"><span class="big-kicker">C</span><span class="big-title">Power &amp; Plyometrics</span></button>
       </div>
-      <div class="summary-card">
-        <div class="summary-head">
-          <h3>This week</h3>
-          <div class="schedule-controls">
-            <button id="shift-minus" class="ghost sm" title="Pull schedule back one day">−1</button>
-            <button id="shift-plus" class="ghost sm" title="Skip today — push schedule forward one day">+1</button>
-            <button id="shift-reset" class="ghost sm" title="Reset shift & clear swaps">Reset</button>
+
+      <section class="section" aria-labelledby="week-heading">
+        <div class="section-head">
+          <h2 id="week-heading" class="section-title">This week</h2>
+          <div class="schedule-controls" role="group" aria-label="Schedule">
+            <button id="shift-minus" class="ghost sm" aria-label="Pull schedule back one day">−1</button>
+            <button id="shift-plus"  class="ghost sm" aria-label="Skip today — push schedule forward one day">+1</button>
+            <button id="shift-reset" class="ghost sm" aria-label="Reset schedule shift and clear swaps">Reset</button>
           </div>
         </div>
-        <div id="shift-info" class="shift-info"></div>
-        <div class="swap-hint">Tap a day, then tap another day to swap them (this week only).</div>
-        <div id="week-summary"></div>
-      </div>
+        <div id="shift-info" class="shift-info" aria-live="polite"></div>
+        <p class="swap-hint">Tap a day, then tap another, to swap them this week.</p>
+        <div id="week-summary" class="week-list"></div>
+      </section>
     </section>
 
-    <!-- Log (workout entry) -->
-    <section id="tab-log" class="panel">
-      <div class="session-picker">
-        <button class="pill active" data-session="A">A — Lower</button>
-        <button class="pill" data-session="B">B — Upper + Core</button>
-        <button class="pill" data-session="C">C — Power</button>
+    <!-- Log -->
+    <section id="tab-log" class="panel" role="tabpanel" aria-labelledby="tabtab-log">
+      <div class="session-picker" role="tablist" aria-label="Session">
+        <button class="pill active" data-session="A" role="tab" aria-selected="true">A · Lower</button>
+        <button class="pill"        data-session="B" role="tab" aria-selected="false">B · Upper + Core</button>
+        <button class="pill"        data-session="C" role="tab" aria-selected="false">C · Power</button>
       </div>
+
       <div class="session-meta">
-        <label>
+        <label class="field">
           <span>Date</span>
-          <input id="session-date" type="date">
+          <div class="date-stepper">
+            <button type="button" id="date-prev" class="stepper" aria-label="Previous day">−</button>
+            <input id="session-date" type="date">
+            <button type="button" id="date-next" class="stepper" aria-label="Next day">+</button>
+          </div>
         </label>
       </div>
+
       <div id="session-form"></div>
+
       <div class="actions">
         <button id="save-session" class="primary">Save session</button>
         <button id="clear-session" class="ghost">Clear</button>
       </div>
-      <div id="save-toast" class="toast" hidden>Saved</div>
+      <div id="save-toast" class="toast" hidden role="status"></div>
     </section>
 
     <!-- Weight -->
-    <section id="tab-weight" class="panel">
-      <div class="weight-stats">
-        <div class="stat"><span>Current</span><b id="wt-current">—</b></div>
-        <div class="stat"><span>Start</span><b id="wt-start">95.0 kg</b></div>
-        <div class="stat"><span>Target</span><b>82–86 kg</b></div>
-      </div>
+    <section id="tab-weight" class="panel" role="tabpanel" aria-labelledby="tabtab-weight">
+      <p id="weight-headline" class="headline" aria-live="polite"></p>
+
       <form id="weight-form" class="weight-form">
-        <label>
+        <label class="field">
           <span>Date</span>
           <input id="wt-date" type="date" required>
         </label>
-        <label>
+        <label class="field">
           <span>Weight (kg)</span>
           <input id="wt-value" type="number" step="0.1" min="40" max="200" placeholder="93.4" required inputmode="decimal">
         </label>
         <button type="submit" class="primary">Log weight</button>
       </form>
+
       <div class="chart-wrap">
-        <canvas id="weight-chart" height="200"></canvas>
+        <canvas id="weight-chart" height="220" role="img" aria-label="Weight chart"></canvas>
       </div>
-      <div class="history">
-        <h3>History</h3>
+
+      <section class="section" aria-labelledby="wt-history-heading">
+        <h2 id="wt-history-heading" class="section-title">History</h2>
         <div id="weight-history"></div>
-      </div>
+      </section>
     </section>
 
     <!-- Progress -->
-    <section id="tab-progress" class="panel">
-      <label class="exercise-select">
+    <section id="tab-progress" class="panel" role="tabpanel" aria-labelledby="tabtab-progress">
+      <label class="field">
         <span>Exercise</span>
         <select id="progress-exercise"></select>
       </label>
       <div class="chart-wrap">
-        <canvas id="progress-chart" height="200"></canvas>
+        <canvas id="progress-chart" height="220" role="img" aria-label="Exercise progress chart"></canvas>
       </div>
-      <div class="history">
-        <h3>History</h3>
+      <section class="section" aria-labelledby="prog-history-heading">
+        <h2 id="prog-history-heading" class="section-title">History</h2>
         <div id="progress-history"></div>
-      </div>
+      </section>
     </section>
 
     <!-- Data -->
-    <section id="tab-data" class="panel">
-      <div class="data-card">
-        <h3>Backup</h3>
-        <p class="muted">Data lives in this browser's localStorage. Export regularly.</p>
+    <section id="tab-data" class="panel" role="tabpanel" aria-labelledby="tabtab-data">
+      <section class="section" aria-labelledby="data-backup-heading">
+        <h2 id="data-backup-heading" class="section-title">Backup</h2>
+        <p class="section-lead">Everything lives in this browser. Export to move between devices.</p>
+        <div id="data-count" class="section-foot"></div>
         <div class="row">
           <button id="export-json" class="primary">Export JSON</button>
           <label class="file-btn">
@@ -142,17 +158,15 @@
             <input id="import-json" type="file" accept="application/json" hidden>
           </label>
         </div>
-      </div>
-      <div class="data-card danger">
-        <h3>Reset</h3>
-        <p class="muted">Deletes all workouts and weight entries. Cannot be undone.</p>
+      </section>
+
+      <hr class="rule">
+
+      <section class="section" aria-labelledby="data-reset-heading">
+        <h2 id="data-reset-heading" class="section-title">Reset</h2>
+        <p class="section-lead">Deletes every workout and weight entry. Export first if you're not sure.</p>
         <button id="reset-all" class="danger">Reset all data</button>
-      </div>
-      <div class="data-card">
-        <h3>About</h3>
-        <p class="muted">6-month cycling strength program. Client-side only.</p>
-        <p class="muted" id="entry-count"></p>
-      </div>
+      </section>
     </section>
   </main>
 </body>
