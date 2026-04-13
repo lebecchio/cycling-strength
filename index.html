@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f12">
+  <title>Strength Program</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <!-- Login -->
+  <section id="login" class="login">
+    <form id="login-form" class="login-card" autocomplete="off">
+      <div class="lock" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="10" width="16" height="11" rx="2"/>
+          <path d="M8 10V7a4 4 0 1 1 8 0v3"/>
+        </svg>
+      </div>
+      <h1>Sign in</h1>
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" autofocus>
+      <button type="submit">Enter</button>
+      <p id="login-error" class="error" hidden>Wrong password</p>
+    </form>
+  </section>
+
+  <!-- App -->
+  <main id="app" hidden>
+    <header class="topbar">
+      <div class="brand">Strength Program</div>
+      <button id="logout" class="ghost" title="Log out" aria-label="Log out">Logout</button>
+    </header>
+
+    <nav class="tabs" id="tabs" role="tablist">
+      <button class="tab active" data-tab="today" role="tab">Today</button>
+      <button class="tab" data-tab="log" role="tab">Log</button>
+      <button class="tab" data-tab="weight" role="tab">Weight</button>
+      <button class="tab" data-tab="progress" role="tab">Progress</button>
+      <button class="tab" data-tab="data" role="tab">Data</button>
+    </nav>
+
+    <!-- Today -->
+    <section id="tab-today" class="panel active">
+      <div class="today-card">
+        <div class="date-label" id="today-date"></div>
+        <div class="prescription" id="today-prescription"></div>
+      </div>
+      <div class="quick-jump">
+        <button class="big" data-session="A">Strength A — Lower Body</button>
+        <button class="big" data-session="B">Strength B — Upper + Core</button>
+        <button class="big" data-session="C">Strength C — Power</button>
+      </div>
+      <div class="summary-card">
+        <h3>This week</h3>
+        <div id="week-summary"></div>
+      </div>
+    </section>
+
+    <!-- Log (workout entry) -->
+    <section id="tab-log" class="panel">
+      <div class="session-picker">
+        <button class="pill active" data-session="A">A — Lower</button>
+        <button class="pill" data-session="B">B — Upper + Core</button>
+        <button class="pill" data-session="C">C — Power</button>
+      </div>
+      <div class="session-meta">
+        <label>
+          <span>Date</span>
+          <input id="session-date" type="date">
+        </label>
+      </div>
+      <div id="session-form"></div>
+      <div class="actions">
+        <button id="save-session" class="primary">Save session</button>
+        <button id="clear-session" class="ghost">Clear</button>
+      </div>
+      <div id="save-toast" class="toast" hidden>Saved</div>
+    </section>
+
+    <!-- Weight -->
+    <section id="tab-weight" class="panel">
+      <div class="weight-stats">
+        <div class="stat"><span>Current</span><b id="wt-current">—</b></div>
+        <div class="stat"><span>Start</span><b id="wt-start">95.0 kg</b></div>
+        <div class="stat"><span>Target</span><b>82–86 kg</b></div>
+      </div>
+      <form id="weight-form" class="weight-form">
+        <label>
+          <span>Date</span>
+          <input id="wt-date" type="date" required>
+        </label>
+        <label>
+          <span>Weight (kg)</span>
+          <input id="wt-value" type="number" step="0.1" min="40" max="200" placeholder="93.4" required inputmode="decimal">
+        </label>
+        <button type="submit" class="primary">Log weight</button>
+      </form>
+      <div class="chart-wrap">
+        <canvas id="weight-chart" height="200"></canvas>
+      </div>
+      <div class="history">
+        <h3>History</h3>
+        <div id="weight-history"></div>
+      </div>
+    </section>
+
+    <!-- Progress -->
+    <section id="tab-progress" class="panel">
+      <label class="exercise-select">
+        <span>Exercise</span>
+        <select id="progress-exercise"></select>
+      </label>
+      <div class="chart-wrap">
+        <canvas id="progress-chart" height="200"></canvas>
+      </div>
+      <div class="history">
+        <h3>History</h3>
+        <div id="progress-history"></div>
+      </div>
+    </section>
+
+    <!-- Data -->
+    <section id="tab-data" class="panel">
+      <div class="data-card">
+        <h3>Backup</h3>
+        <p class="muted">Data lives in this browser's localStorage. Export regularly.</p>
+        <div class="row">
+          <button id="export-json" class="primary">Export JSON</button>
+          <label class="file-btn">
+            Import JSON
+            <input id="import-json" type="file" accept="application/json" hidden>
+          </label>
+        </div>
+      </div>
+      <div class="data-card danger">
+        <h3>Reset</h3>
+        <p class="muted">Deletes all workouts and weight entries. Cannot be undone.</p>
+        <button id="reset-all" class="danger">Reset all data</button>
+      </div>
+      <div class="data-card">
+        <h3>About</h3>
+        <p class="muted">6-month cycling strength program. Client-side only.</p>
+        <p class="muted" id="entry-count"></p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
