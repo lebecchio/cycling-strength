@@ -55,12 +55,41 @@ const SESSIONS = {
 // Weekly plan (simplified). Used for the "Today" card.
 const WEEK_PLAN = {
   1: { code: 'A', title: 'Strength A — Lower Body Power', detail: 'Heavy compound lifts. 50–60 min.' }, // Mon
-  2: { code: 'ride', title: 'Cycling — Structured intervals', detail: '60–90 min. Pick based on block.' },
+  2: { code: 'ride', title: 'Cycling — Structured intervals', detail: '60–90 min. Pick based on block.', options: 'tuesday' },
   3: { code: 'B', title: 'Strength B — Upper Body + Core', detail: 'Pull, press, core. 45–50 min.' },
-  4: { code: 'run', title: 'Run — Easy/moderate', detail: '30–45 min. Conversational pace.' },
+  4: { code: 'run', title: 'Run — Easy/moderate', detail: '30–45 min. Conversational pace.', options: 'run' },
   5: { code: 'rest', title: 'Rest', detail: 'Full rest day.' },
-  6: { code: 'ride', title: 'Cycling — Long ride or race', detail: '90–180 min.' },
+  6: { code: 'ride', title: 'Cycling — Long ride or race', detail: '90–180 min.', options: 'saturday' },
   0: { code: 'rest', title: 'Rest', detail: 'Full rest day.' },
+};
+
+// Session ideas (from spec). Shown inline on ride/run days.
+const SESSION_IDEAS = {
+  tuesday: {
+    title: 'Pick one',
+    items: [
+      { name: 'Threshold',        detail: '3–4 × 8 min at FTP · 2 min easy between' },
+      { name: 'VO2max',           detail: '5–6 × 3 min hard · 3 min easy' },
+      { name: 'Sprint intervals', detail: '8–10 × 30s all-out · 4 min easy (great for crits)' },
+      { name: 'CX simulation',    detail: '8 × 40s max · 20s easy · rest 5 min · repeat 2–3 blocks' },
+      { name: 'Tempo',            detail: '2 × 20 min at sweet spot (~88–93% FTP) · 5 min easy between' },
+    ],
+  },
+  saturday: {
+    title: 'Long ride options',
+    items: [
+      { name: 'Group ride or race', detail: 'If available.' },
+      { name: 'Endurance + sprints', detail: '90–120 min endurance with 3–4 town-sign sprints mixed in' },
+      { name: 'Tempo + CX block',    detail: 'Steady tempo ride with a CX simulation block in the middle' },
+    ],
+  },
+  run: {
+    title: 'Easy pace by default',
+    items: [
+      { name: 'Road season (Apr–Aug)', detail: 'Conversational 30–40 min. Don\'t smash legs before Saturday.' },
+      { name: 'CX prep (Sep+)',        detail: '6–8 × 30s hard · 90s jog — or hill repeats 8–10 × 20s uphill sprint' },
+    ],
+  },
 };
 
 // State -------------------------------------------------------------------
@@ -159,9 +188,19 @@ function renderToday() {
   document.getElementById('today-date').textContent = dateLabel;
 
   const plan = WEEK_PLAN[today.getDay()];
+  const ideas = plan.options ? SESSION_IDEAS[plan.options] : null;
+  const ideasHtml = ideas ? `
+    <div class="ideas">
+      <div class="ideas-title">${ideas.title}</div>
+      <ul>
+        ${ideas.items.map(i => `<li><b>${i.name}</b><span>${i.detail}</span></li>`).join('')}
+      </ul>
+    </div>
+  ` : '';
   document.getElementById('today-prescription').innerHTML = `
     ${plan.title}
     <span class="meta">${plan.detail}</span>
+    ${ideasHtml}
   `;
 
   // Week summary
@@ -209,10 +248,12 @@ function renderSessionForm(forceBlank = false) {
   const date = document.getElementById('session-date').value || isoDate(new Date());
   const existing = workouts.find(w => w.date === date && w.session === currentSession);
   const source = (!forceBlank && existing) ? existing : null;
+  const previous = findPreviousSession(currentSession, date);
 
   const form = document.getElementById('session-form');
   form.innerHTML = sess.exercises.map((ex, exIdx) => {
     const saved = source?.exercises[exIdx];
+    const last = lastSetsFor(ex.name, previous);
     const rowsHtml = [];
     rowsHtml.push(`
       <div class="hd">Set</div>
@@ -233,6 +274,12 @@ function renderSessionForm(forceBlank = false) {
                data-ex="${exIdx}" data-set="${s}" data-field="reps">
       `);
     }
+    const lastHtml = last ? `
+      <div class="exercise-last" data-ex="${exIdx}" title="Tap to copy into inputs">
+        <span class="last-label">Last · ${formatDate(last.date)}</span>
+        <span class="last-sets">${formatSets(last.sets)}</span>
+      </div>
+    ` : `<div class="exercise-last muted-last">No prior log for this exercise</div>`;
     return `
       <div class="exercise">
         <div class="exercise-head">
@@ -242,10 +289,53 @@ function renderSessionForm(forceBlank = false) {
           </div>
           <div class="exercise-pres">${ex.sets} × ${ex.reps}</div>
         </div>
+        ${lastHtml}
         <div class="sets-grid">${rowsHtml.join('')}</div>
       </div>
     `;
   }).join('');
+
+  // Tap "Last" to prefill inputs with last time's numbers.
+  form.querySelectorAll('.exercise-last[data-ex]').forEach(el => {
+    el.addEventListener('click', () => {
+      const exIdx = parseInt(el.dataset.ex, 10);
+      const ex = sess.exercises[exIdx];
+      const last = lastSetsFor(ex.name, previous);
+      if (!last) return;
+      for (let s = 0; s < ex.sets; s++) {
+        const set = last.sets[s];
+        if (!set) continue;
+        const wEl = form.querySelector(`input[data-ex="${exIdx}"][data-set="${s}"][data-field="weight"]`);
+        const rEl = form.querySelector(`input[data-ex="${exIdx}"][data-set="${s}"][data-field="reps"]`);
+        if (wEl && wEl.value === '' && set.weight != null) wEl.value = set.weight;
+        if (rEl && rEl.value === '' && set.reps != null) rEl.value = set.reps;
+      }
+    });
+  });
+}
+
+function findPreviousSession(session, excludeDate) {
+  return workouts
+    .filter(w => w.session === session && w.date !== excludeDate)
+    .sort((a, b) => b.date.localeCompare(a.date))[0] || null;
+}
+
+function lastSetsFor(exerciseName, prevSession) {
+  if (!prevSession) return null;
+  const ex = prevSession.exercises.find(e => e.name === exerciseName);
+  if (!ex) return null;
+  const any = ex.sets.some(s => s.weight != null || s.reps != null);
+  if (!any) return null;
+  return { date: prevSession.date, sets: ex.sets };
+}
+
+function formatSets(sets) {
+  return sets.map(s => {
+    if (s.weight == null && s.reps == null) return '—';
+    const w = s.weight != null ? s.weight : '–';
+    const r = s.reps != null ? s.reps : '–';
+    return `${w}×${r}`;
+  }).join('  ·  ');
 }
 
 function saveSession() {
