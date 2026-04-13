@@ -10,6 +10,8 @@ const STORAGE = {
   auth: 'arenberg.auth',
   workouts: 'arenberg.workouts.v1',
   weights: 'arenberg.weights.v1',
+  shift: 'arenberg.shift.v1',
+  swaps: 'arenberg.swaps.v1',
 };
 
 // Program definition ------------------------------------------------------
@@ -95,9 +97,12 @@ const SESSION_IDEAS = {
 // State -------------------------------------------------------------------
 let workouts = loadJSON(STORAGE.workouts, []);
 let weights  = loadJSON(STORAGE.weights, []);
+let scheduleShift = loadJSON(STORAGE.shift, 0);
+let scheduleSwaps = loadJSON(STORAGE.swaps, {});
 let currentSession = 'A';
 let weightChart = null;
 let progressChart = null;
+let swapSelection = null; // { weekStart, calDay } — first tapped row during a swap
 
 // Boot --------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
@@ -180,6 +185,39 @@ function wireToday() {
       renderSessionForm();
     });
   });
+
+  document.getElementById('shift-plus').addEventListener('click', () => {
+    scheduleShift += 1;
+    saveJSON(STORAGE.shift, scheduleShift);
+    renderToday();
+  });
+  document.getElementById('shift-minus').addEventListener('click', () => {
+    scheduleShift -= 1;
+    saveJSON(STORAGE.shift, scheduleShift);
+    renderToday();
+  });
+  document.getElementById('shift-reset').addEventListener('click', () => {
+    if (!confirm('Reset schedule shift and clear all day swaps?')) return;
+    scheduleShift = 0;
+    scheduleSwaps = {};
+    swapSelection = null;
+    saveJSON(STORAGE.shift, scheduleShift);
+    saveJSON(STORAGE.swaps, scheduleSwaps);
+    renderToday();
+  });
+}
+
+function planForDate(date) {
+  const cal = date.getDay();
+  const weekStart = isoDate(startOfWeek(date));
+  const swap = scheduleSwaps[weekStart];
+  let programWeekday;
+  if (swap && swap[cal] !== undefined) {
+    programWeekday = swap[cal];
+  } else {
+    programWeekday = ((cal - scheduleShift) % 7 + 7) % 7;
+  }
+  return { ...WEEK_PLAN[programWeekday], programWeekday, calWeekday: cal };
 }
 
 function renderToday() {
@@ -187,7 +225,7 @@ function renderToday() {
   const dateLabel = today.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   document.getElementById('today-date').textContent = dateLabel;
 
-  const plan = WEEK_PLAN[today.getDay()];
+  const plan = planForDate(today);
   const ideas = plan.options ? SESSION_IDEAS[plan.options] : null;
   const ideasHtml = ideas ? `
     <div class="ideas">
@@ -203,23 +241,90 @@ function renderToday() {
     ${ideasHtml}
   `;
 
+  // Shift controls
+  const weekStart = isoDate(startOfWeek(today));
+  const hasSwapThisWeek = !!scheduleSwaps[weekStart];
+  const shiftInfo = document.getElementById('shift-info');
+  const shiftHtml = [];
+  if (scheduleShift !== 0) {
+    const dir = scheduleShift > 0 ? 'forward' : 'back';
+    shiftHtml.push(`<span class="chip">Schedule shifted ${Math.abs(scheduleShift)} day${Math.abs(scheduleShift) === 1 ? '' : 's'} ${dir}</span>`);
+  }
+  if (hasSwapThisWeek) {
+    shiftHtml.push(`<span class="chip">Days swapped this week</span>`);
+  }
+  shiftInfo.innerHTML = shiftHtml.join('');
+
   // Week summary
   const start = startOfWeek(today);
   const rows = [];
+  const todayIso = isoDate(today);
   for (let i = 0; i < 7; i++) {
     const d = new Date(start); d.setDate(start.getDate() + i);
     const ymd = isoDate(d);
-    const plan = WEEK_PLAN[d.getDay()];
-    const done = plan.code.length === 1 && workouts.some(w => w.date === ymd && w.session === plan.code);
+    const p = planForDate(d);
+    const done = p.code.length === 1 && workouts.some(w => w.date === ymd && w.session === p.code);
     const dayLabel = d.toLocaleDateString(undefined, { weekday: 'short' });
+    const isToday = ymd === todayIso;
+    const isSelected = swapSelection && swapSelection.weekStart === weekStart && swapSelection.calDay === d.getDay();
     rows.push(`
-      <div class="summary-row ${done ? 'done' : ''}">
+      <div class="summary-row ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" data-calday="${d.getDay()}">
         <span class="day">${dayLabel} · ${d.getDate()}/${d.getMonth() + 1}</span>
-        <span>${plan.title}${done ? ' ✓' : ''}</span>
+        <span>${p.title}${done ? ' ✓' : ''}</span>
       </div>
     `);
   }
   document.getElementById('week-summary').innerHTML = rows.join('');
+
+  // Wire swap clicks
+  document.querySelectorAll('#week-summary .summary-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const calDay = parseInt(row.dataset.calday, 10);
+      handleSwapTap(weekStart, calDay);
+    });
+  });
+}
+
+function handleSwapTap(weekStart, calDay) {
+  if (!swapSelection) {
+    swapSelection = { weekStart, calDay };
+    renderToday();
+    return;
+  }
+  if (swapSelection.weekStart !== weekStart) {
+    swapSelection = { weekStart, calDay };
+    renderToday();
+    return;
+  }
+  if (swapSelection.calDay === calDay) {
+    swapSelection = null;
+    renderToday();
+    return;
+  }
+  // Perform swap
+  const a = swapSelection.calDay;
+  const b = calDay;
+  const existing = scheduleSwaps[weekStart] || {};
+  // Resolve current program-weekday for each slot
+  const resolve = (cd) => existing[cd] !== undefined
+    ? existing[cd]
+    : ((cd - scheduleShift) % 7 + 7) % 7;
+  const progA = resolve(a);
+  const progB = resolve(b);
+  const next = { ...existing, [a]: progB, [b]: progA };
+  // Clean up: if a mapping equals the default, drop it
+  const defaultFor = (cd) => ((cd - scheduleShift) % 7 + 7) % 7;
+  Object.keys(next).forEach(k => {
+    if (next[k] === defaultFor(parseInt(k, 10))) delete next[k];
+  });
+  if (Object.keys(next).length === 0) {
+    delete scheduleSwaps[weekStart];
+  } else {
+    scheduleSwaps[weekStart] = next;
+  }
+  saveJSON(STORAGE.swaps, scheduleSwaps);
+  swapSelection = null;
+  renderToday();
 }
 
 // Session form ------------------------------------------------------------

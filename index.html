@@ -53,7 +53,16 @@
         <button class="big" data-session="C">Strength C — Power</button>
       </div>
       <div class="summary-card">
-        <h3>This week</h3>
+        <div class="summary-head">
+          <h3>This week</h3>
+          <div class="schedule-controls">
+            <button id="shift-minus" class="ghost sm" title="Pull schedule back one day">−1</button>
+            <button id="shift-plus" class="ghost sm" title="Skip today — push schedule forward one day">+1</button>
+            <button id="shift-reset" class="ghost sm" title="Reset shift & clear swaps">Reset</button>
+          </div>
+        </div>
+        <div id="shift-info" class="shift-info"></div>
+        <div class="swap-hint">Tap a day, then tap another day to swap them (this week only).</div>
         <div id="week-summary"></div>
       </div>
     </section>
