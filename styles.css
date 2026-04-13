@@ -169,10 +169,19 @@ main#app {
   text-transform: uppercase;
   margin-bottom: 6px;
 }
-.prescription {
+.prescription { letter-spacing: -0.01em; }
+.prescription .prog-ctx {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.prescription .prog-title {
   font-size: 20px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 .prescription .meta { display: block; color: var(--text-dim); font-size: 14px; font-weight: 400; margin-top: 6px; }
 

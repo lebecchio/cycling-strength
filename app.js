@@ -54,45 +54,142 @@ const SESSIONS = {
   },
 };
 
-// Weekly plan (simplified). Used for the "Today" card.
-const WEEK_PLAN = {
-  1: { code: 'A', title: 'Strength A — Lower Body Power', detail: 'Heavy compound lifts. 50–60 min.' }, // Mon
-  2: { code: 'ride', title: 'Cycling — Structured intervals', detail: '60–90 min. Pick based on block.', options: 'tuesday' },
-  3: { code: 'B', title: 'Strength B — Upper Body + Core', detail: 'Pull, press, core. 45–50 min.' },
-  4: { code: 'run', title: 'Run — Easy/moderate', detail: '30–45 min. Conversational pace.', options: 'run' },
-  5: { code: 'rest', title: 'Rest', detail: 'Full rest day.' },
-  6: { code: 'ride', title: 'Cycling — Long ride or race', detail: '90–180 min.', options: 'saturday' },
-  0: { code: 'rest', title: 'Rest', detail: 'Full rest day.' },
+// 26-week program anchored to a Monday start.
+// Program day 0 = Mon, 1 = Tue, ..., 6 = Sun.
+const PROGRAM_START = '2026-04-13';
+const PROGRAM_WEEKS = 26;
+
+// Gym prescription codes expanded to display strings.
+const GYM_NOTES = {
+  'as-written':       'Strength A + B as written',
+  'push-pr':          'Strength A + B — push PRs',
+  '80%':              'Strength A + B at 80% weight',
+  '70%':              'Strength A + B at 70% weight',
+  'maint-a-minus-10': 'A (3×5, −10% weight) + B as written',
+  'maintenance':      'Maintenance: A (3×5) + B',
+  'light-or-rest':    'Light gym or rest',
+  'full-plus-c':      'A + B full load + add Strength C on Fri',
+  'full-plus-c-pr':   'A + B + C — push for new PRs',
+  'ab-80':            'A + B at 80%',
 };
 
-// Session ideas (from spec). Shown inline on ride/run days.
-const SESSION_IDEAS = {
-  tuesday: {
-    title: 'Pick one',
-    items: [
-      { name: 'Threshold',        detail: '3–4 × 8 min at FTP · 2 min easy between' },
-      { name: 'VO2max',           detail: '5–6 × 3 min hard · 3 min easy' },
-      { name: 'Sprint intervals', detail: '8–10 × 30s all-out · 4 min easy (great for crits)' },
-      { name: 'CX simulation',    detail: '8 × 40s max · 20s easy · rest 5 min · repeat 2–3 blocks' },
-      { name: 'Tempo',            detail: '2 × 20 min at sweet spot (~88–93% FTP) · 5 min easy between' },
-    ],
-  },
-  saturday: {
-    title: 'Long ride options',
-    items: [
-      { name: 'Group ride or race', detail: 'If available.' },
-      { name: 'Endurance + sprints', detail: '90–120 min endurance with 3–4 town-sign sprints mixed in' },
-      { name: 'Tempo + CX block',    detail: 'Steady tempo ride with a CX simulation block in the middle' },
-    ],
-  },
-  run: {
-    title: 'Easy pace by default',
-    items: [
-      { name: 'Road season (Apr–Aug)', detail: 'Conversational 30–40 min. Don\'t smash legs before Saturday.' },
-      { name: 'CX prep (Sep+)',        detail: '6–8 × 30s hard · 90s jog — or hill repeats 8–10 × 20s uphill sprint' },
-    ],
-  },
-};
+const PROGRAM = [
+  // Block 1 — Base + Strength (W1-4)
+  { block: 1, blockName: 'Base + Strength', recovery: false,
+    tue: { title: 'Endurance — Zone 2', detail: 'Steady 60–75 min, conversational' },
+    sat: { title: 'Easy endurance', detail: '90–120 min, group or solo' },
+    gym: 'as-written', run: { title: 'Easy', detail: '30 min, conversational' } },
+  { block: 1, blockName: 'Base + Strength', recovery: false,
+    tue: { title: 'Tempo', detail: '2 × 15 min sweet spot / 5 min easy' },
+    sat: { title: 'Endurance + sprints', detail: '90–120 min + 2 town-sign sprints' },
+    gym: 'as-written', run: { title: 'Easy', detail: '30 min' } },
+  { block: 1, blockName: 'Base + Strength', recovery: false,
+    tue: { title: 'Tempo', detail: '2 × 20 min sweet spot / 5 min easy' },
+    sat: { title: 'Endurance + sprints', detail: '90–120 min + 3 town-sign sprints' },
+    gym: 'as-written', run: { title: 'Easy', detail: '35 min' } },
+  { block: 1, blockName: 'Base + Strength', recovery: true,
+    tue: { title: 'Easy spin', detail: 'Recovery week — keep it light' },
+    sat: { title: 'Easy', detail: '60–75 min, no structure' },
+    gym: '80%', run: { title: 'Easy', detail: '25 min or rest' } },
+  // Block 2 — Threshold Build (W5-8)
+  { block: 2, blockName: 'Threshold Build', recovery: false,
+    tue: { title: 'Threshold', detail: '3 × 8 min at FTP / 2 min easy' },
+    sat: { title: 'Endurance + tempo', detail: '+ 2 × 10 min tempo effort' },
+    gym: 'push-pr', run: { title: 'Easy', detail: '35 min' } },
+  { block: 2, blockName: 'Threshold Build', recovery: false,
+    tue: { title: 'Threshold', detail: '3 × 10 min at FTP / 3 min easy' },
+    sat: { title: 'Long endurance', detail: '2–2.5 hrs steady' },
+    gym: 'push-pr', run: { title: 'Easy', detail: '35 min' } },
+  { block: 2, blockName: 'Threshold Build', recovery: false,
+    tue: { title: 'Threshold', detail: '4 × 8 min at FTP / 2 min easy' },
+    sat: { title: 'Endurance + tempo', detail: '+ 3 × 8 min tempo' },
+    gym: 'push-pr', run: { title: 'Easy', detail: '40 min' } },
+  { block: 2, blockName: 'Threshold Build', recovery: true,
+    tue: { title: 'Easy spin', detail: 'Recovery week' },
+    sat: { title: 'Easy', detail: '75 min' },
+    gym: '80%', run: { title: 'Easy', detail: '25 min or rest' } },
+  // Block 3 — VO2max + Race Prep (W9-12)
+  { block: 3, blockName: 'VO2max + Race Prep', recovery: false,
+    tue: { title: 'VO2max', detail: '5 × 3 min hard / 3 min easy' },
+    sat: { title: 'Race or group ride', detail: '' },
+    gym: 'maint-a-minus-10', run: { title: 'Easy', detail: '30 min' } },
+  { block: 3, blockName: 'VO2max + Race Prep', recovery: false,
+    tue: { title: 'VO2max', detail: '6 × 3 min hard / 3 min easy' },
+    sat: { title: 'Race or long ride with surges', detail: '' },
+    gym: 'maint-a-minus-10', run: { title: 'Easy', detail: '30 min' } },
+  { block: 3, blockName: 'VO2max + Race Prep', recovery: false,
+    tue: { title: 'Sprint intervals', detail: '8 × 30s max / 4 min easy' },
+    sat: { title: 'Race or group ride', detail: '' },
+    gym: 'maint-a-minus-10', run: { title: 'Easy', detail: '35 min' } },
+  { block: 3, blockName: 'VO2max + Race Prep', recovery: true,
+    tue: { title: 'Easy spin', detail: 'Recovery week' },
+    sat: { title: 'Easy ride or rest', detail: '' },
+    gym: '70%', run: { title: 'Rest', detail: '' } },
+  // Block 4 — Peak Road Season (W13-17)
+  { block: 4, blockName: 'Peak Road Season', recovery: false,
+    tue: { title: 'Race-specific', detail: '6 × 1 min hard / 2 min easy + 2 × 5 min threshold' },
+    sat: { title: 'Race', detail: '' },
+    gym: 'maintenance', run: { title: 'Easy', detail: '30 min' } },
+  { block: 4, blockName: 'Peak Road Season', recovery: false,
+    tue: { title: 'Sprint intervals', detail: '10 × 30s / 4 min easy' },
+    sat: { title: 'Race or fast group ride', detail: '' },
+    gym: 'maintenance', run: { title: 'Easy', detail: '30 min' } },
+  { block: 4, blockName: 'Peak Road Season', recovery: false,
+    tue: { title: 'CX simulation', detail: '8 × 40s max / 20s easy · 5 min rest · × 2 blocks' },
+    sat: { title: 'Race', detail: '' },
+    gym: 'maintenance', run: { title: 'Easy', detail: '30 min' } },
+  { block: 4, blockName: 'Peak Road Season', recovery: false,
+    tue: { title: 'Threshold', detail: '3 × 10 min / 3 min easy' },
+    sat: { title: 'Race or long ride', detail: '' },
+    gym: 'maintenance', run: { title: 'Easy', detail: '30 min' } },
+  { block: 4, blockName: 'Peak Road Season', recovery: true,
+    tue: { title: 'Easy spin', detail: 'Recovery week' },
+    sat: { title: 'Easy ride', detail: '' },
+    gym: 'light-or-rest', run: { title: 'Rest', detail: '' } },
+  // Block 5 — CX Transition (W18-21)
+  { block: 5, blockName: 'CX Transition', recovery: false,
+    tue: { title: 'CX simulation', detail: '8 × 40s / 20s · × 2 blocks' },
+    sat: { title: 'Endurance + CX skills', detail: 'Practice CX skills if possible' },
+    gym: 'full-plus-c', run: { title: 'Easy', detail: '35 min' } },
+  { block: 5, blockName: 'CX Transition', recovery: false,
+    tue: { title: 'CX simulation', detail: '10 × 40s / 20s · × 3 blocks' },
+    sat: { title: 'Endurance with surges', detail: '4–5 hard surges' },
+    gym: 'full-plus-c', run: { title: 'Intervals', detail: '6 × 30s hard / 90s jog' } },
+  { block: 5, blockName: 'CX Transition', recovery: false,
+    tue: { title: 'Sprint intervals', detail: '10 × 30s / 3 min easy' },
+    sat: { title: 'CX practice or hard group ride', detail: '' },
+    gym: 'full-plus-c-pr', run: { title: 'Intervals', detail: '8 × 30s hard / 90s jog' } },
+  { block: 5, blockName: 'CX Transition', recovery: true,
+    tue: { title: 'Easy spin', detail: 'Recovery week' },
+    sat: { title: 'Easy ride', detail: '' },
+    gym: 'ab-80', run: { title: 'Easy', detail: '30 min' } },
+  // Block 6 — CX Race Season (W22-26)
+  { block: 6, blockName: 'CX Race Season', recovery: false,
+    tue: { title: 'CX simulation', detail: '6 × 40s / 20s · × 3 blocks' },
+    sat: { title: 'CX Race', detail: '' },
+    gym: 'maintenance', run: { title: 'CX intervals', detail: '8 × 30s hard / 60s jog' } },
+  { block: 6, blockName: 'CX Race Season', recovery: false,
+    tue: { title: 'Sprint intervals or CX sim', detail: 'Choose based on race needs' },
+    sat: { title: 'CX Race', detail: '' },
+    gym: 'maintenance', run: { title: 'CX intervals', detail: '' } },
+  { block: 6, blockName: 'CX Race Season', recovery: false,
+    tue: { title: 'Threshold', detail: '3 × 8 min' },
+    sat: { title: 'CX Race', detail: '' },
+    gym: 'maintenance', run: { title: 'CX intervals', detail: '' } },
+  { block: 6, blockName: 'CX Race Season', recovery: false,
+    tue: { title: 'CX sim or sprint intervals', detail: '' },
+    sat: { title: 'CX Race', detail: '' },
+    gym: 'maintenance', run: { title: 'Easy', detail: '30 min' } },
+  { block: 6, blockName: 'CX Race Season', recovery: false,
+    tue: { title: 'Easy spin', detail: 'End of program' },
+    sat: { title: 'CX Race or fun ride', detail: '' },
+    gym: 'light-or-rest', run: { title: 'Easy jog or rest', detail: '' } },
+];
+
+// Maps getDay() (0=Sun..6=Sat) → program day index (0=Mon..6=Sun).
+function getDayToProgramDay(cal) {
+  return (cal + 6) % 7;
+}
 
 // State -------------------------------------------------------------------
 let workouts = loadJSON(STORAGE.workouts, []);
@@ -207,17 +304,64 @@ function wireToday() {
   });
 }
 
-function planForDate(date) {
+// Resolve calendar date (after swap override) back to a date,
+// then compute which program (weekIdx, dayIdx) applies after shift.
+function resolvedDateFor(date) {
+  const weekStart = startOfWeek(date);
   const cal = date.getDay();
-  const weekStart = isoDate(startOfWeek(date));
-  const swap = scheduleSwaps[weekStart];
-  let programWeekday;
-  if (swap && swap[cal] !== undefined) {
-    programWeekday = swap[cal];
-  } else {
-    programWeekday = ((cal - scheduleShift) % 7 + 7) % 7;
+  const swap = scheduleSwaps[isoDate(weekStart)];
+  const resolvedCal = swap && swap[cal] !== undefined ? swap[cal] : cal;
+  const resolved = new Date(weekStart);
+  resolved.setDate(weekStart.getDate() + getDayToProgramDay(resolvedCal));
+  return resolved;
+}
+
+function programPositionFor(date) {
+  const start = new Date(PROGRAM_START + 'T00:00:00');
+  const d = new Date(isoDate(date) + 'T00:00:00');
+  const days = Math.round((d - start) / 86400000) - scheduleShift;
+  if (days < 0) return { status: 'pre', daysUntil: -days };
+  const weekIdx = Math.floor(days / 7);
+  const dayIdx = days % 7;
+  if (weekIdx >= PROGRAM_WEEKS) return { status: 'post' };
+  return { status: 'in', weekIdx, dayIdx, program: PROGRAM[weekIdx] };
+}
+
+function planForDate(date) {
+  const resolved = resolvedDateFor(date);
+  const pos = programPositionFor(resolved);
+  if (pos.status !== 'in') {
+    // Out-of-program fallback: generic weekly template using the calendar weekday.
+    return { ...genericPlan(resolved.getDay()), status: pos.status, daysUntil: pos.daysUntil };
   }
-  return { ...WEEK_PLAN[programWeekday], programWeekday, calWeekday: cal };
+  return { ...buildDailyPlan(pos), status: 'in', weekIdx: pos.weekIdx, dayIdx: pos.dayIdx, program: pos.program };
+}
+
+function genericPlan(cal) {
+  // cal is getDay() (0=Sun..6=Sat)
+  const map = {
+    1: { code: 'A',    title: 'Strength A — Lower Body Power', detail: '' },
+    2: { code: 'ride', title: 'Cycling — Structured intervals', detail: '60–90 min' },
+    3: { code: 'B',    title: 'Strength B — Upper Body + Core', detail: '' },
+    4: { code: 'run',  title: 'Run — Easy', detail: '30–45 min' },
+    5: { code: 'rest', title: 'Rest', detail: '' },
+    6: { code: 'ride', title: 'Cycling — Long ride', detail: '90–180 min' },
+    0: { code: 'rest', title: 'Rest', detail: '' },
+  };
+  return map[cal];
+}
+
+function buildDailyPlan({ dayIdx, program }) {
+  const gym = GYM_NOTES[program.gym] || '';
+  switch (dayIdx) {
+    case 0: return { code: 'A',    title: 'Strength A — Lower Body Power', detail: gym };
+    case 1: return { code: 'ride', title: `Cycling — ${program.tue.title}`, detail: program.tue.detail };
+    case 2: return { code: 'B',    title: 'Strength B — Upper Body + Core', detail: gym };
+    case 3: return { code: 'run',  title: `Run — ${program.run.title}`, detail: program.run.detail };
+    case 4: return { code: 'rest', title: 'Rest', detail: '' };
+    case 5: return { code: 'ride', title: `Cycling — ${program.sat.title}`, detail: program.sat.detail };
+    case 6: return { code: 'rest', title: 'Rest', detail: '' };
+  }
 }
 
 function renderToday() {
@@ -226,29 +370,35 @@ function renderToday() {
   document.getElementById('today-date').textContent = dateLabel;
 
   const plan = planForDate(today);
-  const ideas = plan.options ? SESSION_IDEAS[plan.options] : null;
-  const ideasHtml = ideas ? `
-    <div class="ideas">
-      <div class="ideas-title">${ideas.title}</div>
-      <ul>
-        ${ideas.items.map(i => `<li><b>${i.name}</b><span>${i.detail}</span></li>`).join('')}
-      </ul>
-    </div>
-  ` : '';
+  const pos = programPositionFor(resolvedDateFor(today));
+
+  // Program context (week N of 26 · Block X — Name)
+  let context = '';
+  if (pos.status === 'in') {
+    const weekNum = pos.weekIdx + 1;
+    const recovery = pos.program.recovery ? ' · recovery' : '';
+    context = `<div class="prog-ctx">Week ${weekNum} of ${PROGRAM_WEEKS} · Block ${pos.program.block} — ${pos.program.blockName}${recovery}</div>`;
+  } else if (pos.status === 'pre') {
+    context = `<div class="prog-ctx">Program starts in ${pos.daysUntil} day${pos.daysUntil === 1 ? '' : 's'}</div>`;
+  } else {
+    context = `<div class="prog-ctx">Program complete</div>`;
+  }
+
   document.getElementById('today-prescription').innerHTML = `
-    ${plan.title}
-    <span class="meta">${plan.detail}</span>
-    ${ideasHtml}
+    ${context}
+    <div class="prog-title">${plan.title}</div>
+    ${plan.detail ? `<div class="meta">${plan.detail}</div>` : ''}
   `;
 
-  // Shift controls
+  // Shift / swap chips
   const weekStart = isoDate(startOfWeek(today));
   const hasSwapThisWeek = !!scheduleSwaps[weekStart];
   const shiftInfo = document.getElementById('shift-info');
   const shiftHtml = [];
-  if (scheduleShift !== 0) {
-    const dir = scheduleShift > 0 ? 'forward' : 'back';
-    shiftHtml.push(`<span class="chip">Schedule shifted ${Math.abs(scheduleShift)} day${Math.abs(scheduleShift) === 1 ? '' : 's'} ${dir}</span>`);
+  if (scheduleShift > 0) {
+    shiftHtml.push(`<span class="chip">Program paused ${scheduleShift} day${scheduleShift === 1 ? '' : 's'}</span>`);
+  } else if (scheduleShift < 0) {
+    shiftHtml.push(`<span class="chip">Program advanced ${-scheduleShift} day${scheduleShift === -1 ? '' : 's'}</span>`);
   }
   if (hasSwapThisWeek) {
     shiftHtml.push(`<span class="chip">Days swapped this week</span>`);
@@ -301,21 +451,14 @@ function handleSwapTap(weekStart, calDay) {
     renderToday();
     return;
   }
-  // Perform swap
+  // Perform swap. We store "which calendar day's plan should this slot show".
   const a = swapSelection.calDay;
   const b = calDay;
   const existing = scheduleSwaps[weekStart] || {};
-  // Resolve current program-weekday for each slot
-  const resolve = (cd) => existing[cd] !== undefined
-    ? existing[cd]
-    : ((cd - scheduleShift) % 7 + 7) % 7;
-  const progA = resolve(a);
-  const progB = resolve(b);
-  const next = { ...existing, [a]: progB, [b]: progA };
-  // Clean up: if a mapping equals the default, drop it
-  const defaultFor = (cd) => ((cd - scheduleShift) % 7 + 7) % 7;
+  const resolve = (cd) => existing[cd] !== undefined ? existing[cd] : cd;
+  const next = { ...existing, [a]: resolve(b), [b]: resolve(a) };
   Object.keys(next).forEach(k => {
-    if (next[k] === defaultFor(parseInt(k, 10))) delete next[k];
+    if (next[k] === parseInt(k, 10)) delete next[k];
   });
   if (Object.keys(next).length === 0) {
     delete scheduleSwaps[weekStart];
