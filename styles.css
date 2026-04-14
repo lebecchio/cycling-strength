@@ -30,8 +30,8 @@
   --r:    10px;
   --r-lg: 14px;
 
-  /* Typography */
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  /* Typography — one family, hierarchy via weight + size + tracking */
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body:    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Fluid spacing steps */
@@ -108,12 +108,11 @@ button, .file-btn, .summary-row, .pill, .tab, .stepper {
 }
 .login-mark .mark-title {
   font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(44px, 10vw, 88px);
-  line-height: 0.95;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  font-size: clamp(44px, 10vw, 80px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
   color: var(--text);
-  font-variation-settings: "opsz" 144, "SOFT" 30;
 }
 .login-form {
   display: flex;
@@ -164,10 +163,9 @@ main#app {
   padding: var(--space-4) 0 var(--space-3);
 }
 .brand {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 20px;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.015em;
   color: var(--text);
 }
 
@@ -261,10 +259,9 @@ main#app {
   margin-bottom: var(--space-3);
 }
 .section-title {
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 .section-lead {
   color: var(--text-dim);
@@ -301,12 +298,10 @@ main#app {
   margin-bottom: var(--space-2);
 }
 .prog-title {
-  font-family: var(--font-display);
   font-size: clamp(28px, 6vw, 40px);
   line-height: 1.05;
-  letter-spacing: -0.02em;
-  font-weight: 400;
-  font-variation-settings: "opsz" 144, "SOFT" 20;
+  letter-spacing: -0.025em;
+  font-weight: 700;
 }
 .prescription .meta {
   display: block;
@@ -338,10 +333,9 @@ main#app {
 }
 .big:hover { border-color: var(--accent); background: var(--accent-soft); }
 .big-kicker {
-  font-family: var(--font-display);
   font-size: 18px;
   color: var(--accent);
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 .big-title {
@@ -489,10 +483,9 @@ input:focus, select:focus { border-color: var(--accent); }
   margin-bottom: var(--space-2);
 }
 .exercise-name {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 18px;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.015em;
   line-height: 1.2;
 }
 .exercise-pres {
@@ -593,17 +586,15 @@ input:focus, select:focus { border-color: var(--accent); }
 
 /* Weight tab ------------------------------------------------------------ */
 .headline {
-  font-family: var(--font-display);
   font-size: clamp(22px, 4.5vw, 30px);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1.2;
   color: var(--text);
   padding: var(--space-4) 0 var(--space-3);
   max-width: 26ch;
-  font-weight: 400;
-  font-variation-settings: "opsz" 144, "SOFT" 10;
+  font-weight: 700;
 }
-.headline .h-accent { color: var(--accent); font-weight: 500; }
+.headline .h-accent { color: var(--accent); font-weight: 700; }
 .headline .h-dim { color: var(--text-dim); }
 
 .weight-form {
