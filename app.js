@@ -573,6 +573,24 @@ function renderSessionForm(forceBlank = false) {
     `;
   }).join('');
 
+  // Auto-fill later empty sets from the most recently edited set.
+  form.querySelectorAll('input[data-set]').forEach(el => {
+    el.addEventListener('input', () => {
+      const val = el.value;
+      if (val === '') return;
+      const exIdx = el.dataset.ex;
+      const field = el.dataset.field;
+      const fromSet = parseInt(el.dataset.set, 10);
+      const later = form.querySelectorAll(
+        `input[data-ex="${exIdx}"][data-field="${field}"]`
+      );
+      later.forEach(other => {
+        const s = parseInt(other.dataset.set, 10);
+        if (s > fromSet && other.value === '') other.value = val;
+      });
+    });
+  });
+
   // Tap "Last" to prefill inputs with last time's numbers.
   form.querySelectorAll('.exercise-last[data-ex]').forEach(el => {
     el.addEventListener('click', () => {
