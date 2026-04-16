@@ -65,13 +65,9 @@
       </div>
 
       <section class="section" aria-labelledby="week-heading">
-        <div class="section-head">
+        <div class="week-head">
           <h2 id="week-heading" class="section-title">This week</h2>
-          <div class="schedule-controls" role="group" aria-label="Schedule">
-            <button id="shift-minus" class="ghost sm" aria-label="Pull schedule back one day">−1</button>
-            <button id="shift-plus"  class="ghost sm" aria-label="Skip today — push schedule forward one day">+1</button>
-            <button id="shift-reset" class="ghost sm" aria-label="Reset schedule shift and clear swaps">Reset</button>
-          </div>
+          <div id="week-subtitle" class="week-subtitle" aria-live="polite"></div>
         </div>
         <div id="shift-info" class="shift-info" aria-live="polite"></div>
         <div class="week-nav" role="group" aria-label="Browse weeks">
@@ -82,6 +78,15 @@
         </div>
         <p class="swap-hint">Tap a day, then tap another, to swap them.</p>
         <div id="week-summary" class="week-list"></div>
+
+        <div class="shift-row">
+          <span class="shift-row-label">Missed a day?</span>
+          <div class="schedule-controls" role="group" aria-label="Schedule shift">
+            <button id="shift-minus" class="ghost sm" aria-label="Pull schedule back one day">−1 day</button>
+            <button id="shift-plus"  class="ghost sm" aria-label="Push schedule forward one day">+1 day</button>
+            <button id="shift-reset" class="ghost sm" aria-label="Reset schedule shift and clear swaps">Reset</button>
+          </div>
+        </div>
       </section>
     </section>
 

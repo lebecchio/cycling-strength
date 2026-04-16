@@ -410,26 +410,37 @@ function renderToday() {
   const dateLabel = today.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   document.getElementById('today-date').textContent = dateLabel;
 
-  const plan = planForDate(today);
   const pos = programPositionFor(resolvedDateFor(today));
+  const presc = document.getElementById('today-prescription');
 
-  // Program context (week N of 26 · Block X — Name)
-  let context = '';
-  if (pos.status === 'in') {
+  if (pos.status === 'pre') {
+    const startIso = getProgramStart();
+    const startDate = new Date(startIso + 'T00:00:00');
+    const startLabel = startDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    const firstProgram = PROGRAM[0];
+    const firstPlan = buildDailyPlan({ dayIdx: 0, program: firstProgram });
+    const days = pos.daysUntil;
+    presc.innerHTML = `
+      <div class="prog-kicker">Starts in ${days} day${days === 1 ? '' : 's'}</div>
+      <div class="prog-title">${startLabel}</div>
+      <div class="meta">Week 1 · Block 1 — ${firstProgram.blockName}. First session: ${firstPlan.title}.</div>
+    `;
+  } else if (pos.status === 'post') {
+    presc.innerHTML = `
+      <div class="prog-kicker">Program complete</div>
+      <div class="prog-title">${PROGRAM_WEEKS} weeks done</div>
+      <div class="meta">Keep training freely — log any session to continue tracking.</div>
+    `;
+  } else {
+    const plan = planForDate(today);
     const weekNum = pos.weekIdx + 1;
     const recovery = pos.program.recovery ? ' · recovery' : '';
-    context = `<div class="prog-ctx">Week ${weekNum} of ${PROGRAM_WEEKS} · Block ${pos.program.block} — ${pos.program.blockName}${recovery}</div>`;
-  } else if (pos.status === 'pre') {
-    context = `<div class="prog-ctx">Program starts in ${pos.daysUntil} day${pos.daysUntil === 1 ? '' : 's'}</div>`;
-  } else {
-    context = `<div class="prog-ctx">Program complete</div>`;
+    presc.innerHTML = `
+      <div class="prog-kicker">Week ${weekNum} of ${PROGRAM_WEEKS} · Block ${pos.program.block} — ${pos.program.blockName}${recovery}</div>
+      <div class="prog-title">${plan.title}</div>
+      ${plan.detail ? `<div class="meta">${plan.detail}</div>` : ''}
+    `;
   }
-
-  document.getElementById('today-prescription').innerHTML = `
-    ${context}
-    <div class="prog-title">${plan.title}</div>
-    ${plan.detail ? `<div class="meta">${plan.detail}</div>` : ''}
-  `;
 
   // Week being browsed (offset from calendar "this week")
   const viewedMonday = new Date(startOfWeek(today));
@@ -447,6 +458,36 @@ function renderToday() {
   else heading.textContent = `${-viewedWeekOffset} weeks back`;
   document.getElementById('week-range').textContent = `${rangeFmt(viewedMonday)} – ${rangeFmt(viewedSunday)}`;
   document.getElementById('week-today').disabled = (viewedWeekOffset === 0);
+
+  // Week subtitle — program context for the viewed week
+  const weekStates = { in: 0, pre: 0, post: 0 };
+  let firstInDay = null;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(viewedMonday); d.setDate(viewedMonday.getDate() + i);
+    const dayPos = programPositionFor(resolvedDateFor(d));
+    weekStates[dayPos.status]++;
+    if (!firstInDay && dayPos.status === 'in') firstInDay = { pos: dayPos, calDay: d };
+  }
+  const subtitle = document.getElementById('week-subtitle');
+  if (weekStates.in === 7 && firstInDay) {
+    const w = firstInDay.pos.weekIdx + 1;
+    const p = firstInDay.pos.program;
+    subtitle.textContent = `Week ${w} of ${PROGRAM_WEEKS} · Block ${p.block} — ${p.blockName}${p.recovery ? ' · recovery' : ''}`;
+  } else if (weekStates.in > 0 && firstInDay) {
+    const dow = firstInDay.calDay.toLocaleDateString(undefined, { weekday: 'long' });
+    const w = firstInDay.pos.weekIdx + 1;
+    const p = firstInDay.pos.program;
+    subtitle.textContent = `Week ${w} begins ${dow} · Block ${p.block} — ${p.blockName}`;
+  } else if (weekStates.pre === 7) {
+    const startIso = getProgramStart();
+    const start = new Date(startIso + 'T00:00:00');
+    const diff = Math.round((start - viewedMonday) / 86400000);
+    subtitle.textContent = diff <= 13
+      ? `Not started yet · begins ${start.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}`
+      : `Not started yet`;
+  } else {
+    subtitle.textContent = `Past the program · free week`;
+  }
 
   // Shift / swap chips
   const hasSwapViewedWeek = !!scheduleSwaps[weekStart];
