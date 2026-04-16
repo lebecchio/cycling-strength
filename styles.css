@@ -370,6 +370,22 @@ main#app {
   max-width: 48ch;
 }
 
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+.week-range {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  flex: 1;
+}
+.week-nav #week-today { margin-left: auto; }
+
 /* Week list (no nested cards) ------------------------------------------ */
 .week-list { display: grid; }
 .summary-row {
@@ -402,6 +418,9 @@ main#app {
   box-shadow: inset 2px 0 0 var(--accent);
 }
 .summary-row .mark { color: var(--text-muted); font-size: 14px; }
+.summary-row.inactive { cursor: default; opacity: 0.55; }
+.summary-row.inactive:hover { background: transparent; }
+.summary-row.inactive .title { color: var(--text-muted); font-style: normal; }
 
 /* Session picker (Log tab) ---------------------------------------------- */
 .session-picker {

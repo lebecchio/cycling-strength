@@ -214,6 +214,7 @@ let currentSession = 'A';
 let weightChart = null;
 let progressChart = null;
 let swapSelection = null; // { weekStart, calDay } — first tapped row during a swap
+let viewedWeekOffset = 0; // 0 = current calendar week; +N = N weeks ahead
 
 // Boot --------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
@@ -325,6 +326,23 @@ function wireToday() {
       renderToday();
     });
   });
+
+  document.getElementById('week-prev').addEventListener('click', () => {
+    viewedWeekOffset -= 1;
+    swapSelection = null;
+    renderToday();
+  });
+  document.getElementById('week-next').addEventListener('click', () => {
+    viewedWeekOffset += 1;
+    swapSelection = null;
+    renderToday();
+  });
+  document.getElementById('week-today').addEventListener('click', () => {
+    if (viewedWeekOffset === 0) return;
+    viewedWeekOffset = 0;
+    swapSelection = null;
+    renderToday();
+  });
 }
 
 // Resolve calendar date (after swap override) back to a date,
@@ -413,9 +431,25 @@ function renderToday() {
     ${plan.detail ? `<div class="meta">${plan.detail}</div>` : ''}
   `;
 
+  // Week being browsed (offset from calendar "this week")
+  const viewedMonday = new Date(startOfWeek(today));
+  viewedMonday.setDate(viewedMonday.getDate() + viewedWeekOffset * 7);
+  const weekStart = isoDate(viewedMonday);
+  const viewedSunday = new Date(viewedMonday); viewedSunday.setDate(viewedMonday.getDate() + 6);
+  const rangeFmt = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+  // Heading + range label
+  const heading = document.getElementById('week-heading');
+  if (viewedWeekOffset === 0) heading.textContent = 'This week';
+  else if (viewedWeekOffset === 1) heading.textContent = 'Next week';
+  else if (viewedWeekOffset === -1) heading.textContent = 'Last week';
+  else if (viewedWeekOffset > 0) heading.textContent = `${viewedWeekOffset} weeks ahead`;
+  else heading.textContent = `${-viewedWeekOffset} weeks back`;
+  document.getElementById('week-range').textContent = `${rangeFmt(viewedMonday)} – ${rangeFmt(viewedSunday)}`;
+  document.getElementById('week-today').disabled = (viewedWeekOffset === 0);
+
   // Shift / swap chips
-  const weekStart = isoDate(startOfWeek(today));
-  const hasSwapThisWeek = !!scheduleSwaps[weekStart];
+  const hasSwapViewedWeek = !!scheduleSwaps[weekStart];
   const shiftInfo = document.getElementById('shift-info');
   const shiftHtml = [];
   if (scheduleShift > 0) {
@@ -423,30 +457,37 @@ function renderToday() {
   } else if (scheduleShift < 0) {
     shiftHtml.push(`<span class="chip">Program advanced ${-scheduleShift} day${scheduleShift === -1 ? '' : 's'}</span>`);
   }
-  if (hasSwapThisWeek) {
-    shiftHtml.push(`<span class="chip">Days swapped this week</span>`);
+  if (hasSwapViewedWeek) {
+    shiftHtml.push(`<span class="chip">Days swapped</span>`);
   }
   shiftInfo.innerHTML = shiftHtml.join('');
 
   // Week summary (buttons for keyboard access)
-  const start = startOfWeek(today);
   const rows = [];
   const todayIso = isoDate(today);
   for (let i = 0; i < 7; i++) {
-    const d = new Date(start); d.setDate(start.getDate() + i);
+    const d = new Date(viewedMonday); d.setDate(viewedMonday.getDate() + i);
     const ymd = isoDate(d);
     const p = planForDate(d);
-    const done = p.code && p.code.length === 1 && workouts.some(w => w.date === ymd && w.session === p.code);
+    const inactive = p.status !== 'in';
+    const title = inactive ? 'No plan yet' : p.title;
+    const done = !inactive && p.code && p.code.length === 1 && workouts.some(w => w.date === ymd && w.session === p.code);
     const dayLabel = d.toLocaleDateString(undefined, { weekday: 'short' });
     const dateShort = `${d.getDate()}/${d.getMonth() + 1}`;
     const isToday = ymd === todayIso;
     const isSelected = swapSelection && swapSelection.weekStart === weekStart && swapSelection.calDay === d.getDay();
+    const cls = ['summary-row'];
+    if (done) cls.push('done');
+    if (isToday) cls.push('today');
+    if (isSelected) cls.push('selected');
+    if (inactive) cls.push('inactive');
     rows.push(`
-      <button type="button" class="summary-row ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
+      <button type="button" class="${cls.join(' ')}"
               data-calday="${d.getDay()}"
-              aria-label="${escapeHtml(dayLabel)} ${dateShort} — ${escapeHtml(p.title)}${done ? ' (done)' : ''}. Tap to swap.">
+              ${inactive ? 'disabled' : ''}
+              aria-label="${escapeHtml(dayLabel)} ${dateShort} — ${escapeHtml(title)}${done ? ' (done)' : ''}${inactive ? '' : '. Tap to swap.'}">
         <span class="day">${dayLabel} · ${dateShort}</span>
-        <span class="title">${escapeHtml(p.title)}</span>
+        <span class="title">${escapeHtml(title)}</span>
         <span class="mark">${done ? '✓' : ''}</span>
       </button>
     `);
@@ -454,6 +495,7 @@ function renderToday() {
   document.getElementById('week-summary').innerHTML = rows.join('');
 
   document.querySelectorAll('#week-summary .summary-row').forEach(row => {
+    if (row.disabled) return;
     row.addEventListener('click', () => {
       const calDay = parseInt(row.dataset.calday, 10);
       handleSwapTap(weekStart, calDay);

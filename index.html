@@ -71,7 +71,13 @@
           </div>
         </div>
         <div id="shift-info" class="shift-info" aria-live="polite"></div>
-        <p class="swap-hint">Tap a day, then tap another, to swap them this week.</p>
+        <div class="week-nav" role="group" aria-label="Browse weeks">
+          <button type="button" id="week-prev" class="ghost sm" aria-label="Previous week">←</button>
+          <span id="week-range" class="week-range" aria-live="polite"></span>
+          <button type="button" id="week-next" class="ghost sm" aria-label="Next week">→</button>
+          <button type="button" id="week-today" class="ghost sm">Today</button>
+        </div>
+        <p class="swap-hint">Tap a day, then tap another, to swap them.</p>
         <div id="week-summary" class="week-list"></div>
       </section>
     </section>
