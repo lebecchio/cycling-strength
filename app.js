@@ -12,6 +12,7 @@ const STORAGE = {
   weights: 'arenberg.weights.v1',
   shift: 'arenberg.shift.v1',
   swaps: 'arenberg.swaps.v1',
+  start: 'arenberg.start.v1',
 };
 
 // Program definition ------------------------------------------------------
@@ -56,8 +57,21 @@ const SESSIONS = {
 
 // 26-week program anchored to a Monday start.
 // Program day 0 = Mon, 1 = Tue, ..., 6 = Sun.
-const PROGRAM_START = '2026-04-13';
+const DEFAULT_PROGRAM_START = '2026-04-13';
 const PROGRAM_WEEKS = 26;
+
+function getProgramStart() {
+  const saved = loadJSON(STORAGE.start, null);
+  return saved || DEFAULT_PROGRAM_START;
+}
+
+// Snap any date to the Monday of its week (local time).
+function snapToMonday(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const shift = getDayToProgramDay(d.getDay()); // 0 if Mon
+  d.setDate(d.getDate() - shift);
+  return isoDate(d);
+}
 
 // Gym prescription codes expanded to display strings.
 const GYM_NOTES = {
@@ -249,6 +263,7 @@ function initApp() {
   renderWeight();
   renderProgress();
   renderDataCount();
+  renderStartInfo();
 }
 
 function wireLogout() {
@@ -325,7 +340,7 @@ function resolvedDateFor(date) {
 }
 
 function programPositionFor(date) {
-  const start = new Date(PROGRAM_START + 'T00:00:00');
+  const start = new Date(getProgramStart() + 'T00:00:00');
   const d = new Date(isoDate(date) + 'T00:00:00');
   const days = Math.round((d - start) / 86400000) - scheduleShift;
   if (days < 0) return { status: 'pre', daysUntil: -days };
@@ -909,6 +924,7 @@ function renderProgressHistory() {
 
 // Data tab ----------------------------------------------------------------
 function wireData() {
+  document.getElementById('start-form').addEventListener('submit', saveStartDate);
   document.getElementById('export-json').addEventListener('click', exportJSON);
   document.getElementById('import-json').addEventListener('change', importJSON);
   document.getElementById('reset-all').addEventListener('click', (e) => {
@@ -971,6 +987,36 @@ function renderDataCount() {
   const kCount = weights.length;
   el.textContent =
     `Backup will include ${wCount} workout${wCount === 1 ? '' : 's'} and ${kCount} weight entr${kCount === 1 ? 'y' : 'ies'}.`;
+}
+
+function renderStartInfo() {
+  const input = document.getElementById('start-date');
+  const info = document.getElementById('start-info');
+  if (!input || !info) return;
+  const start = getProgramStart();
+  input.value = start;
+  const startDate = new Date(start + 'T00:00:00');
+  const endDate = new Date(start + 'T00:00:00');
+  endDate.setDate(endDate.getDate() + PROGRAM_WEEKS * 7 - 1);
+  const fmt = d => d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+  const customized = start !== DEFAULT_PROGRAM_START;
+  info.textContent = `Week 1 begins Monday, ${fmt(startDate)}. Program ends ${fmt(endDate)}.` +
+    (customized ? ' Custom start date set.' : '');
+}
+
+function saveStartDate(e) {
+  e.preventDefault();
+  const raw = document.getElementById('start-date').value;
+  if (!raw) { showToast('Pick a date', 'err'); return; }
+  const monday = snapToMonday(raw);
+  saveJSON(STORAGE.start, monday);
+  // Shift is independent of start date — clearing it avoids surprises.
+  scheduleShift = 0;
+  saveJSON(STORAGE.shift, scheduleShift);
+  renderStartInfo();
+  renderToday();
+  const snapped = monday !== raw;
+  showToast(snapped ? `Snapped to Monday, ${formatDate(monday)}` : 'Start date saved');
 }
 
 // Helpers -----------------------------------------------------------------

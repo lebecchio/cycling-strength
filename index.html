@@ -147,6 +147,21 @@
 
     <!-- Data -->
     <section id="tab-data" class="panel" role="tabpanel" aria-labelledby="tabtab-data">
+      <section class="section" aria-labelledby="data-start-heading">
+        <h2 id="data-start-heading" class="section-title">Program start</h2>
+        <p class="section-lead">The program runs for 26 weeks from this Monday. Pick any day in the week you want to begin — it will snap to that Monday.</p>
+        <form id="start-form" class="start-form">
+          <label class="field">
+            <span>Start date</span>
+            <input id="start-date" type="date" required>
+          </label>
+          <button type="submit" class="primary">Save start date</button>
+        </form>
+        <div id="start-info" class="section-foot" aria-live="polite"></div>
+      </section>
+
+      <hr class="rule">
+
       <section class="section" aria-labelledby="data-backup-heading">
         <h2 id="data-backup-heading" class="section-title">Backup</h2>
         <p class="section-lead">Everything lives in this browser. Export to move between devices.</p>
